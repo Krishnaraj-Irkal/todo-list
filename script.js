@@ -1,65 +1,106 @@
-const inputBox = document.querySelector('#input-box');
-const taskList = document.querySelector(".taskList");
+const taskInput = document.querySelector(".task-input input"),
+filters = document.querySelectorAll(".filters span"),
+clearAll = document.querySelector(".clear-btn"),
+taskBox = document.querySelector(".task-box");
 
-const addTodo = () => {
-    if (inputBox.value === '') {
-        alert('Add some task');
-    } else {
-        const li = document.createElement('li');
-        li.innerHTML = `<div>
-        <button>
-            <span class="material-symbols-outlined uncheck">
-                radio_button_unchecked
-            </span>
-        </button>
-        <div>
-            <input type="text" class="task-text" value="${inputBox.value}" readonly="readonly">
-        </div>
-    </div>
-    <div class="action">
-        <button>
-            <span class="material-symbols-outlined edit">
-                edit
-            </span> 
-        </button>
-        <button>
-            <span class="material-symbols-outlined close">
-                close
-            </span>
-        </button>
-    </div>`
-    taskList.append(li);
-    inputBox.value='';
+let editId,
+isEditTask = false,
+todos = JSON.parse(localStorage.getItem("todo-list"));
+
+filters.forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelector("span.active").classList.remove("active");
+        btn.classList.add("active");
+        showTodo(btn.id);
+    });
+});
+
+function showTodo(filter) {
+    let li = "";
+    if(todos) {
+        todos.forEach((todo, id) => {
+            let completed = todo.status == "completed" ? "checked" : "";
+            if(filter == todo.status || filter == "all") {
+                li += `<li class="task">
+                            <label for="${id}">
+                                <input onclick="updateStatus(this)" type="checkbox" id="${id}" ${completed}>
+                                <p class="${completed}">${todo.name}</p>
+                            </label>
+                            <div class="settings">
+                                <i onclick="showMenu(this)" class="uil uil-ellipsis-h"></i>
+                                <ul class="task-menu">
+                                    <li onclick='editTask(${id}, "${todo.name}")'><i class="uil uil-pen"></i>Edit</li>
+                                    <li onclick='deleteTask(${id}, "${filter}")'><i class="uil uil-trash"></i>Delete</li>
+                                </ul>
+                            </div>
+                        </li>`;
+            }
+        });
     }
-    saveData();
+    taskBox.innerHTML = li || `<span style="color:gray">You don't have any task here</span>`;
+    let checkTask = taskBox.querySelectorAll(".task");
+    !checkTask.length ? clearAll.classList.remove("active") : clearAll.classList.add("active");
+    taskBox.offsetHeight >= 300 ? taskBox.classList.add("overflow") : taskBox.classList.remove("overflow");
 }
+showTodo("all");
 
-taskList.addEventListener('click', (e) => {
-    if (e.target.tagName === `LI`) {
-        e.target.classList.toggle('checked');
-    } else if (e.target.tagName === 'SPAN' && e.target.classList.contains(`close`)) {
-        const li = e.target.parentElement.parentElement.parentElement;
-        li.remove();
-    } else if (e.target.tagName === 'SPAN' && e.target.classList.contains(`edit`)) {
-        const li = e.target.parentElement.parentElement.parentElement;
-        const taskText = li.querySelector('.task-text');
-        if (e.target.innerText.toLowerCase() === 'edit') {
-            taskText.removeAttribute(`readonly`);
-            e.target.innerHTML = 'save';
-        } else {
-            e.target.innerHTML = 'edit';
+function showMenu(selectedTask) {
+    let menuDiv = selectedTask.parentElement.lastElementChild;
+    menuDiv.classList.add("show");
+    document.addEventListener("click", e => {
+        if(e.target.tagName != "I" || e.target != selectedTask) {
+            menuDiv.classList.remove("show");
         }
-        saveData();
+    });
+}
+
+function updateStatus(selectedTask) {
+    let taskName = selectedTask.parentElement.lastElementChild;
+    if(selectedTask.checked) {
+        taskName.classList.add("checked");
+        todos[selectedTask.id].status = "completed";
+    } else {
+        taskName.classList.remove("checked");
+        todos[selectedTask.id].status = "pending";
     }
-}, false);
-
-const saveData = () => {
-    console.log('insaveData');
-    localStorage.setItem("data", taskList.innerHTML);
+    localStorage.setItem("todo-list", JSON.stringify(todos))
 }
 
-const showTask = () => {
-    taskList.innerHTML =localStorage.getItem('data');
+function editTask(taskId, textName) {
+    editId = taskId;
+    isEditTask = true;
+    taskInput.value = textName;
+    taskInput.focus();
+    taskInput.classList.add("active");
 }
 
-showTask();
+function deleteTask(deleteId, filter) {
+    isEditTask = false;
+    todos.splice(deleteId, 1);
+    localStorage.setItem("todo-list", JSON.stringify(todos));
+    showTodo(filter);
+}
+
+clearAll.addEventListener("click", () => {
+    isEditTask = false;
+    todos.splice(0, todos.length);
+    localStorage.setItem("todo-list", JSON.stringify(todos));
+    showTodo()
+});
+
+taskInput.addEventListener("keyup", e => {
+    let userTask = taskInput.value.trim();
+    if(e.key == "Enter" && userTask) {
+        if(!isEditTask) {
+            todos = !todos ? [] : todos;
+            let taskInfo = {name: userTask, status: "pending"};
+            todos.push(taskInfo);
+        } else {
+            isEditTask = false;
+            todos[editId].name = userTask;
+        }
+        taskInput.value = "";
+        localStorage.setItem("todo-list", JSON.stringify(todos));
+        showTodo(document.querySelector("span.active").id);
+    }
+});
