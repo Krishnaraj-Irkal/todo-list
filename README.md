@@ -36,8 +36,3 @@ git clone https://github.com/Krishnaraj-Irkal/todo-list.git
 ## Author
 
 - [Krishnaraj Irkal](https://www.linkedin.com/in/krishnaraj-irkal/)
-
-## License
-
-This project is open-source and available under the [MIT License](LICENSE).
-
